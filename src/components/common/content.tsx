@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
 import { SHA256 } from 'crypto-js';
 import axios from 'axios';
-import { Loader } from './loader';
-
-interface FormData {
-  vacancyName: string;
-  companyName: string;
-  companyPlace: string;
-  schedule: string;
-  experience: string;
-  keySkills: string[];
-}
+import { FormData } from '@/app.interface';
+import { generateRequest } from '@/api';
+import { TextDisplay } from './textdisplay';
 
 export const Content = () => {
   const [formData, setFormData] = useState<FormData>({
@@ -21,6 +14,12 @@ export const Content = () => {
     experience: '',
     keySkills: [],
   });
+
+  const [tokens, setTokens] = useState<string[]>([])
+
+  const texts = tokens.map((token, index) => {
+    return <TextDisplay key={index} token={token}></TextDisplay>
+  })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -46,13 +45,10 @@ export const Content = () => {
     try {
       const token = generateToken(formData);
       const combinedData = { ...formData, token };
-      const response = await axios.post('https://slightly-well-duck.ngrok-free.app/api/generate', combinedData, {
-          headers: {
-              'Content-Type': 'application/json'
-          }
-      });
+      const response = await generateRequest(combinedData)
       if (response.status === 200) {
           console.log('Запрос успешно отправлен');
+          setTokens([...tokens, token])
       } else {
           console.error('Произошла ошибка при отправке запроса');
       }
@@ -102,6 +98,9 @@ export const Content = () => {
         </div>
         <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Отправить запрос</button>
       </form>
+      <div>
+        {texts}
+      </div>
     </div>
   );
 };

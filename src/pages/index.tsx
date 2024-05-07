@@ -5,7 +5,6 @@ export default function Home() {
   return (
     <div>
       <Content></Content>
-      <TextDisplay text=""></TextDisplay>
     </div>
   )
 }
