@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { SHA256 } from 'crypto-js';
-import axios from 'axios';
 import { FormData } from '@/app.interface';
 import { generateRequest } from '@/api';
 import { TextDisplay } from './textdisplay';
@@ -17,8 +16,18 @@ export const Content = () => {
 
   const [tokens, setTokens] = useState<string[]>([])
 
+  const [busyDisplays, setBusyDisplays] = useState<number>(0);
+
+  const [isButtonDisabled, setIsButtonDisabled] = useState<boolean>(false);
+
+  const handlePositionChange = useCallback((position: number) => {
+    if (position === -1) {
+      setBusyDisplays(prevBusyDisplays => prevBusyDisplays - 1);
+    }
+  }, []);
+
   const texts = tokens.map((token, index) => {
-    return <TextDisplay key={index} token={token}></TextDisplay>
+    return <TextDisplay key={index} token={token} onPositionChange={handlePositionChange}></TextDisplay>
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -39,21 +48,46 @@ export const Content = () => {
     return hash;
   };
 
+  const showNotification = (message: string) => {
+    if (Notification.permission === 'granted') {
+        new Notification(message);
+    } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                new Notification(message);
+            }
+        });
+    }
+};
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log(busyDisplays);
+
+    if (busyDisplays >= 3) {
+      showNotification('Невозможно отправить больше 3 запросов одновременно');
+      return;
+    }
     
     try {
+      setIsButtonDisabled(true);
+      setBusyDisplays(prevBusyDisplays => prevBusyDisplays + 1);
       const token = generateToken(formData);
       const combinedData = { ...formData, token };
       const response = await generateRequest(combinedData)
       if (response.status === 200) {
-          console.log('Запрос успешно отправлен');
-          setTokens([...tokens, token])
+        showNotification('Запрос успешно отправлен');
+        setTokens([...tokens, token]);
       } else {
-          console.error('Произошла ошибка при отправке запроса');
+        showNotification('Произошла непредвиденная ошибка')
+        setBusyDisplays(prevBusyDisplays => prevBusyDisplays - 1);
       }
+      setIsButtonDisabled(false);
   } catch (error) {
-      console.error('Произошла ошибка:', error);
+    showNotification(`Произошла ошибка: ${error}`);
+    setIsButtonDisabled(false);
+    setBusyDisplays(prevBusyDisplays => prevBusyDisplays - 1);
   }
   };
 
@@ -62,7 +96,7 @@ export const Content = () => {
       <form onSubmit={handleSubmit} className="py-4 px-8">
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2">
-            Название вакансии:
+            Название вакансии*:
             <input type="text" name="vacancyName" value={formData.vacancyName} onChange={handleChange} maxLength={100} required className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
           </label>
         </div>
@@ -96,7 +130,7 @@ export const Content = () => {
             <input type="text" name="keySkills" value={formData.keySkills.join(', ')} onChange={handleKeySkillsChange} maxLength={200} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
           </label>
         </div>
-        <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Отправить запрос</button>
+        <button type="submit" disabled={isButtonDisabled} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Отправить запрос</button>
       </form>
       <div>
         {texts}

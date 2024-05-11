@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Loader } from './loader';
 import { statusRequest } from '@/api';
+import { MdContentCopy } from 'react-icons/md';
 
 interface TextDisplayProps {
     token: string;
+    onPositionChange: (position: number) => void;
 }
 
 export function TextDisplay(props: TextDisplayProps) {
@@ -20,11 +22,11 @@ export function TextDisplay(props: TextDisplayProps) {
                     if (data.message === 'GOOD') {
                         setPosition(-1);
                         setContentText(data.content.toString());
-                        setQueueText('Сгенерированный текст вакансии:')
-                        clearInterval(interval)
+                        setQueueText('Сгенерированный текст вакансии:');
+                        clearInterval(interval);
                     } else if (data.message === 'OK') {
-                        const newPos = Number(data.content)
-                        setPosition(newPos)
+                        const newPos = Number(data.content);
+                        setPosition(newPos);
                         if (newPos > 0) {
                             setQueueText(`Ваш запрос ${newPos} в очереди`)
                         } else {
@@ -32,10 +34,14 @@ export function TextDisplay(props: TextDisplayProps) {
                         }
                     }
                 } else {
-                    console.error('Произошла ошибка при отправке запроса:', response.data.content);
+                    setQueueText(`Произошла ошибка при отправке запроса: ${response.data.content}`);
+                    setPosition(-1);
+                    clearInterval(interval);
                 }
             } catch (error) {
-                console.error('Произошла ошибка:', error);
+                setQueueText(`Произошла ошибка: ${error}`);
+                setPosition(-1);
+                clearInterval(interval);
             }
         }, 5000);
 
@@ -44,13 +50,35 @@ export function TextDisplay(props: TextDisplayProps) {
         };
     }, []); 
 
+    const showNotification = (message: string) => {
+        if (Notification.permission === 'granted') {
+            new Notification(message);
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    new Notification(message);
+                }
+            });
+        }
+    };
+
+    useEffect(() => {
+        props.onPositionChange(position);
+    }, [position, props.onPositionChange]);
+
     return (
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-6 mt-4 mx-8 relative">
-            <p className='{absoulute inset-0 flex items-center justify-center}'>{queueText}</p>
+        <div className="bg-gray-100 border border-gray-300 rounded-lg p-6 mt-4 mx-8 relative min-h-40">
+            <p className="absoulute inset-0 flex items-center justify-center}">{queueText}</p>
             <div className={`absolute inset-0 flex items-center justify-center ${position >= 0 ? 'block' : 'hidden'}`}>
                 <Loader/>
             </div>
             <p className="text-gray-800 text-lg">{contentText}</p>
+            <div className={`absolute top-0 right-0 m-2 cursor-pointer ${position >= 0 ? 'hidden' : 'block'}`} onClick={()=>{
+                navigator.clipboard.writeText(contentText);
+                showNotification('Текст скопирован')
+            }}>
+                <MdContentCopy size={24} />
+            </div>
         </div>
     );
 }
