@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from './loader';
-import { statusRequest } from '@/api';
 import { MdContentCopy } from 'react-icons/md';
+import { Socket, io } from 'socket.io-client';
+import { statusPositionResponse } from '@/app.interface';
 
 interface TextDisplayProps {
     token: string;
@@ -12,43 +13,47 @@ export function TextDisplay(props: TextDisplayProps) {
     const [position, setPosition] = useState(9999);
     const [contentText, setContentText] = useState("");
     const [queueText, setQueueText] = useState("");
+    const contentTextRef = useRef<string>("");
+    const socketUrl = process.env.NEXT_PUBLIC_API_KEY || "http://localhost:80";
+    const socket: Socket = io(socketUrl);
 
     useEffect(() => {
-        const interval = setInterval(async () => {
-            try {
-                const response = await statusRequest(props.token);
-                if (response.response.status === 200) {
-                    const data = response.data;
-                    if (data.message === 'GOOD') {
-                        setPosition(-1);
-                        setContentText(data.content.toString());
-                        setQueueText('Сгенерированный текст вакансии:');
-                        clearInterval(interval);
-                    } else if (data.message === 'OK') {
-                        const newPos = Number(data.content);
-                        setPosition(newPos);
-                        if (newPos > 0) {
-                            setQueueText(`Ваш запрос ${newPos} в очереди`)
-                        } else {
-                            setQueueText('Прямо сейчас обрабатываем, осталось чуть-чуть')
-                        }
-                    }
-                } else {
-                    setQueueText(`Произошла ошибка при отправке запроса: ${response.data.content}`);
-                    setPosition(-1);
-                    clearInterval(interval);
-                }
-            } catch (error) {
-                setQueueText(`Произошла ошибка: ${error}`);
+        socket.on('queue_update', (data: statusPositionResponse) => {
+            if (data.message === 'GOOD') {
                 setPosition(-1);
-                clearInterval(interval);
+                setContentText(data.content.toString());
+                contentTextRef.current = data.content.toString();
+                setQueueText('Сгенерированный текст вакансии:');
+                showNotification('Один из ваших текстов готов');
+                setTimeout(() => {
+                    socket.disconnect();
+                }, 0);
+            } else if (data.message === 'OK') {
+                const newPos = Number(data.content);
+                setPosition(newPos);
+                if (newPos > 0) {
+                    setQueueText(`Ваш запрос ${newPos} в очереди`)
+                } else {
+                    setQueueText('Прямо сейчас обрабатываем, осталось чуть-чуть')
+                }
+            } else {
+                setQueueText('К сожалению ваш запрос был утерян, попробуйте повторить попытку генерации');
+                setPosition(-1);
             }
-        }, 5000);
-
+        })
+        socket.on('disconnect', () => {
+            setPosition(-1);
+            if (contentTextRef.current == "") {
+                setQueueText('Произошла непредвиденная ошибка, попробуйте повторить снова')
+            }
+        }) 
+        socket.connect()
+        socket.emit('user_connect', {token: props.token})
+        
         return () => {
-            clearInterval(interval);
-        };
-    }, []); 
+            socket.disconnect();
+        }
+    }, [])
 
     const showNotification = (message: string) => {
         if (Notification.permission === 'granted') {

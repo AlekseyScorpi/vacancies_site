@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@types/crypto-js": "^4.2.2",
+    "@types/socket.io-client": "^3.0.0",
     "axios": "^1.6.8",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.4.5",
@@ -17,7 +18,9 @@
     "react": "^18",
     "react-dom": "^18",
     "react-icons": "^5.2.1",
-    "react-spinners": "^0.13.8"
+    "react-spinners": "^0.13.8",
+    "react-tooltip": "^5.26.4",
+    "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
     "@types/node": "^20",
