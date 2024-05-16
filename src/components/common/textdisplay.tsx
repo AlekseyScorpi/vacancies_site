@@ -15,7 +15,11 @@ export function TextDisplay(props: TextDisplayProps) {
     const [queueText, setQueueText] = useState("");
     const contentTextRef = useRef<string>("");
     const socketUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:80";
-    const socket: Socket = io(socketUrl);
+    const socket: Socket = io(socketUrl, {
+        extraHeaders: {
+            "ngrok-skip-browser-warning": "true"
+        }
+    });
 
     useEffect(() => {
         socket.on('queue_update', (data: statusPositionResponse) => {
