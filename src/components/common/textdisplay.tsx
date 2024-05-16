@@ -14,7 +14,7 @@ export function TextDisplay(props: TextDisplayProps) {
     const [contentText, setContentText] = useState("");
     const [queueText, setQueueText] = useState("");
     const contentTextRef = useRef<string>("");
-    const socketUrl = process.env.NEXT_PUBLIC_API_KEY || "http://localhost:80";
+    const socketUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:80";
     const socket: Socket = io(socketUrl);
 
     useEffect(() => {
