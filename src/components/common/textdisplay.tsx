@@ -43,6 +43,9 @@ export function TextDisplay(props: TextDisplayProps) {
             } else {
                 setQueueText('К сожалению ваш запрос был утерян, попробуйте повторить попытку генерации');
                 setPosition(-1);
+                setTimeout(() => {
+                    socket.disconnect();
+                }, 0);
             }
         })
         socket.on('disconnect', () => {
